@@ -1,0 +1,670 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookle Search Results</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            margin: 0;
+            padding-top: 1rem; /* Space from the top for the header */
+        }
+        .bookle-logo-small {
+            font-family: 'Product Sans', sans-serif; /* Fallback to a generic sans-serif */
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4285F4; /* Blue */
+            letter-spacing: -0.05em;
+            display: inline-flex; /* Use inline-flex to align with search bar */
+            align-items: center;
+        }
+        /* Individual letter colors for the Bookle logo */
+        .bookle-logo-small span:nth-child(1) { color: #4285F4; } /* B - Blue */
+        .bookle-logo-small span:nth-child(2) { color: #EA4335; } /* o - Red */
+        .bookle-logo-small span:nth-child(3) { color: #FBBC05; } /* o - Yellow */
+        .bookle-logo-small span:nth-child(4) { color: #4285F4; } /* k - Blue */
+        .bookle-logo-small span:nth-child(5) { color: #34A853; } /* l - Green */
+        .bookle-logo-small span:nth-child(6) { color: #EA4335; } /* e - Red */
+
+        .search-input-small {
+            width: 100%;
+            max-width: 35rem; /* Max width for search bar */
+            padding: 0.6rem 1rem;
+            border: 1px solid #dfe1e5;
+            border-radius: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            font-size: 1rem;
+            outline: none;
+            transition: box-shadow 0.2s ease-in-out;
+        }
+        .search-input-small:focus {
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            border-color: transparent;
+        }
+        .result-link {
+            color: #1a0dab; /* Google blue link color */
+            font-size: 1.25rem;
+            line-height: 1.5;
+            text-decoration: none;
+        }
+        .result-link:hover {
+            text-decoration: underline;
+        }
+        .result-url {
+            color: #006621; /* Google green URL color */
+            font-size: 0.875rem;
+        }
+        .result-snippet {
+            color: #4d5156; /* Google gray snippet color */
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+        .search-tools-link {
+            color: #5f6368;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+        .search-tools-link:hover {
+            text-decoration: underline;
+        }
+        /* Responsive adjustments for layout */
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .search-bar-wrapper {
+                width: 100%;
+                margin-left: 0;
+                margin-top: 1rem;
+            }
+            .search-input-small {
+                max-width: none;
+            }
+            .bookle-logo-small {
+                margin-left: 1rem;
+            }
+        }
+        .loading-indicator {
+            display: none; /* Hidden by default in Flask rendering */
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 1.1rem;
+            color: #5f6368;
+        }
+    </style>
+</head>
+<body>
+    <header class="flex items-center justify-between p-4 border-b border-gray-200">
+        <div class="flex items-center w-full max-w-6xl mx-auto">
+            <a href="/" class="bookle-logo-small mr-4">
+                <span>B</span><span>o</span><span>o</span><span>k</span><span>l</span><span>e</span>
+            </a>
+
+            <form action="/search" method="get" class="flex-grow flex items-center relative">
+                <input
+                    type="text"
+                    id="searchInputSmall"
+                    name="q"
+                    class="search-input-small"
+                    aria-label="Search Bookle again"
+                    value="{{ query if query else '' }}" {# Populate with current query #}
+                >
+                <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full text-gray-500 hover:text-gray-700 focus:outline-none">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                    </svg>
+                </button>
+            </form>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-6">
+        <div class="flex items-center text-sm text-gray-600 mb-4 border-b border-gray-200 pb-2">
+            <span id="resultsCount" class="mr-4">
+                {% if results %}
+                    About {{ results|length }} results
+                {% else %}
+                    No results found
+                {% endif %}
+            </span>
+            <a href="#" class="search-tools-link flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z"></path>
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path>
+                </svg>
+                Tools
+            </a>
+        </div>
+
+        {# FLAN-T5 Recommendation Section #}
+        {% if flan_recommendation %}
+            <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6" role="alert">
+                <div class="flex items-center">
+                    <div class="flex-shrink-0 text-blue-800">
+                        <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
+                            <path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path>
+                        </svg>
+                    </div>
+                    <div class="ml-3">
+                        <p class="font-bold text-blue-800">Top Bookle Recommendation:</p>
+                        <p class="text-sm text-blue-700">"{{ flan_recommendation }}"</p>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+
+
+        <div id="loadingIndicator" class="loading-indicator">
+            <svg class="animate-spin h-8 w-8 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <p class="mt-2">Searching for books...</p>
+        </div>
+
+        <div id="searchResults" class="space-y-6">
+            {% if results %}
+                {% for book in results %}
+                    <div class="result-item flex items-start space-x-4 mb-6">
+                        <img src="{{ book.image }}" alt="{{ book.title }}" class="w-20 h-28 object-cover rounded shadow flex-shrink-0">
+                        <div class="flex-1">
+                            <a href="{{ book.url }}" class="result-link">{{ book.title }}</a>
+                            <div class="result-url">{{ book.url }}</div>
+                            <div class="result-snippet mt-1">{{ book.snippet }}</div>
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <p>No results found for your query. Please try a different search term.</p>
+            {% endif %}
+        </div>
+
+        <div class="flex justify-center mt-10">
+            <nav aria-label="Page navigation example">
+                <ul class="inline-flex -space-x-px">
+                    <li>
+                        <a href="#" class="px-3 py-2 ml-0 leading-tight text-blue-700 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-blue-700">Previous</a>
+                    </li>
+                    <li>
+                        <a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 hover:bg-gray-100 hover:text-blue-700">1</a>
+                    </li>
+                    <li>
+                        <a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 hover:bg-gray-100 hover:text-blue-700">2</a>
+                    </li>
+                    <li>
+                        <a href="#" aria-current="page" class="px-3 py-2 text-blue-600 border border-gray-300 bg-blue-50 hover:bg-blue-100 hover:text-blue-700">3</a>
+                    </li>
+                    <li>
+                        <a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 hover:bg-gray-100 hover:text-blue-700">4</a>
+                    </li>
+                    <li>
+                        <a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 hover:bg-gray-100 hover:text-blue-700">5</a>
+                    </li>
+                    <li>
+                        <a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-blue-700">Next</a>
+                    </li>
+                </ul>
+            </nav>
+        </div>
+    </main>
+
+    <script>
+        // No more complex search logic in JavaScript. Flask renders the page directly.
+        // The loading indicator could be used if you wanted to implement AJAX for live search.
+        // For now, it's hidden by default and managed by Flask's rendering.
+        document.addEventListener('DOMContentLoaded', function() {
+            // Hide the loading indicator as results are directly rendered by Flask
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            if (loadingIndicator) {
+                loadingIndicator.style.display = 'none';
+            }
+        });
+    </script>
+</body>
+</html> 
+
+=====================================================================================================
+
+-->
+<!-- 
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookle Search Results</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            margin: 0;
+            padding-top: 1rem; /* Space from the top for the header */
+        }
+        .bookle-logo-small {
+            font-family: 'ProductSans', sans-serif; /* Fallback to a generic sans-serif */
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4285F4; /* Blue */
+            letter-spacing: -0.05em;
+            display: inline-flex; /* Use inline-flex to align with searchbar */
+            align-items: center;
+        }
+        /* Individual letter colors for the Bookle logo */
+        .bookle-logo-small span:nth-child(1) { color: #4285F4; } /* B-Blue */
+        .bookle-logo-small span:nth-child(2) { color: #EA4335; } /* o-Red */
+        .bookle-logo-small span:nth-child(3) { color: #FBBC05; } /* o-Yellow */
+        .bookle-logo-small span:nth-child(4) { color: #4285F4; } /* k-Blue */
+        .bookle-logo-small span:nth-child(5) { color: #34A853; } /* l-Green */
+        .bookle-logo-small span:nth-child(6) { color: #EA4335; } /* e-Red */
+        .search-input-small {
+            width: 100%;
+            max-width: 35rem; /* Max width for searchbar */
+            padding: 0.6rem 1rem;
+            border: 1px solid #dfe1e5;
+            border-radius: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            font-size: 1rem;
+            outline: none;
+            transition: box-shadow 0.2s ease-in-out;
+        }
+        .search-input-small:focus {
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            border-color: transparent;
+        }
+        .result-link {
+            color: #1a0dab; /* Google blue link color */
+            font-size: 1.25rem;
+            line-height: 1.5;
+            text-decoration: none;
+        }
+        .result-link:hover {
+            text-decoration: underline;
+        }
+        .result-url {
+            color: #006621; /* Google green URL color */
+            font-size: 0.875rem;
+        }
+        .result-snippet {
+            color: #4d5156; /* Google gray snippet color */
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+        .search-tools-link {
+            color: #5f6368;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+        .search-tools-link:hover {
+            text-decoration: underline;
+        }
+        /* Responsive adjustments for layout */
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .search-bar-wrapper {
+                width: 100%;
+                margin-left: 0;
+                margin-top: 1rem;
+            }
+            .search-input-small {
+                max-width: none;
+            }
+            .bookle-logo-small {
+                margin-left: 1rem;
+            }
+        }
+        .loading-indicator {
+            display: none; /* Hidden by default in Flask rendering */
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 1.1rem;
+            color: #5f6368;
+        }
+    </style>
+</head>
+<body>
+    <header class="flex items-center justify-between p-4 border-b border-gray-200">
+        <div class="flex items-center w-full max-w-6xl mx-auto">
+            <a href="/" class="bookle-logo-small mr-4"><span>B</span><span>o</span><span>o</span><span>k</span><span>l</span><span>e</span></a>
+            <form action="/search" method="get" class="flex-grow flex items-center relative">
+                <input type="text" id="searchInputSmall" name="q" class="search-input-small" aria-label="Search Bookle again" value="{{query if query else ''}}">
+                <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full text-gray-500 hover:text-gray-700 focus:outline-none">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </button>
+            </form>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-6">
+        <div class="flex items-center text-sm text-gray-600 mb-4 border-b border-gray-200 pb-2">
+            <span id="resultsCount" class="mr-4">{% if results %}Top {{ results|length }} results{% else %}No results found{% endif %}</span>
+            <a href="#" class="search-tools-link flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.943 3.31.826 2.372 2.372a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.941 1.543-.826 3.31-2.372 2.372a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>Tools
+            </a>
+        </div>
+
+        {# NEW: Translated Query Section #}
+        {% if translated_query and translated_query != query %}
+        <div class="bg-gray-100 border-l-4 border-gray-400 p-3 mb-6" role="status">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 text-gray-800">
+                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2h4a2 2 0 002-2V6a2 2 0 00-2-2H4zm11.5 5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM14.5 13a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM11.5 17a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM17.5 17a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="font-bold text-gray-800">Showing results for:</p>
+                    <p class="text-sm text-gray-700">"{{ translated_query }}"</p>
+                    <p class="text-xs text-gray-600 mt-1">Your original query was: "{{ query }}"</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    -->
+         <!-- {% if translated_query and translated_query != query %}
+        <div class="mb-4 text-left">
+            <p class="text-sm text-black-700">
+                Showing results for: "<a href="{{ url_for('search', q=translated_query) }}" class="text-blue-600 hover:underline">{{ translated_query }}</a>"
+                <br>
+                <span class="text-xs text-black-600">
+                    (Original query: "<a href="{{ url_for('search', q=query) }}" class="text-blue-500 hover:underline">{{ query }}</a>")
+                </span>
+            </p>
+        </div>
+        {% endif %} -->  
+<!-- 
+        {# FLAN-T5 Recommendation Section #}
+        {% if flan_recommendation %}
+        <div class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6" role="alert">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 text-blue-800">
+                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                </div>
+                <div class="ml-3">
+                    <p class="font-bold text-blue-800">Top Bookle Recommendation:</p>
+                    <p class="text-sm text-blue-700">"{{flan_recommendation}}"</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        <div id="loadingIndicator" class="loading-indicator">
+            <svg class="animate-spin h-8 w-8 text-blue-500 mx-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2.529 7.938A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+            <p class="mt-2">Searching for books...</p>
+        </div>
+
+        <div id="searchResults" class="space-y-6">
+            {% if results %}
+                {% for book in results %}
+                <div class="result-item flex items-start space-x-4 mb-6">
+                    <img src="{{ book.image }}" alt="{{ book.title }}" class="w-20 h-28 object-cover rounded shadow flex-shrink-0">
+                    <div class="flex-1">
+                        <a href="{{ book.url }}" class="result-link">{{ book.title }}</a>
+                        <div class="result-url">{{ book.url }}</div>
+                        <div class="result-snippet mt-1">{{ book.snippet }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p>No results found for your query. Please try a different search term.</p>
+            {% endif %}
+        </div>
+
+        <div class="flex justify-center mt-10">
+            <nav aria-label="Page navigation example">
+                <ul class="inline-flex -space-x-px">
+                    <li><a href="#" class="px-3 py-2 ml-0 leading-tight text-blue-700 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-blue-700">Previous</a></li>
+                    <li><a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 hover:bg-gray-100 hover:text-blue-700">1</a></li>
+                    <li><a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 hover:bg-gray-100 hover:text-blue-700">2</a></li>
+                    <li><a href="#" aria-current="page" class="px-3 py-2 text-blue-600 border border-gray-300 bg-blue-50 hover:bg-blue-100 hover:text-blue-700">3</a></li>
+                    <li><a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 hover:bg-gray-100 hover:text-blue-700">4</a></li>
+                    <li><a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 hover:bg-gray-100 hover:text-blue-700">5</a></li>
+                    <li><a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-blue-700">Next</a></li>
+                </ul>
+            </nav>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function(){
+            const loadingIndicator = document.getElementById('loadingIndicator');
+            if(loadingIndicator){
+                loadingIndicator.style.display='none';
+            }
+        });
+    </script>
+</body>
+</html> -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bookle Search Results</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #ffffff;
+            margin: 0;
+            padding-top: 1rem; /* Space from the top for the header */
+        }
+        .bookle-logo-small {
+            font-family: 'ProductSans', sans-serif; /* Fallback to a generic sans-serif */
+            font-size: 2rem;
+            font-weight: 700;
+            color: #4285F4; /* Blue */
+            letter-spacing: -0.05em;
+            display: inline-flex; /* Use inline-flex to align with searchbar */
+            align-items: center;
+        }
+        /* Individual letter colors for the Bookle logo */
+        .bookle-logo-small span:nth-child(1) { color: #4285F4; } /* B-Blue */
+        .bookle-logo-small span:nth-child(2) { color: #EA4335; } /* o-Red */
+        .bookle-logo-small span:nth-child(3) { color: #FBBC05; } /* o-Yellow */
+        .bookle-logo-small span:nth-child(4) { color: #4285F4; } /* k-Blue */
+        .bookle-logo-small span:nth-child(5) { color: #34A853; } /* l-Green */
+        .bookle-logo-small span:nth-child(6) { color: #EA4335; } /* e-Red */
+        .search-input-small {
+            width: 100%;
+            max-width: 35rem; /* Max width for searchbar */
+            padding: 0.6rem 1rem;
+            border: 1px solid #dfe1e5;
+            border-radius: 24px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            font-size: 1rem;
+            outline: none;
+            transition: box-shadow 0.2s ease-in-out;
+        }
+        .search-input-small:focus {
+            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+            border-color: transparent;
+        }
+        .result-link {
+            color: #1a0dab; /* Google blue link color */
+            font-size: 1.25rem;
+            line-height: 1.5;
+            text-decoration: none;
+        }
+        .result-link:hover {
+            text-decoration: underline;
+        }
+        .result-url {
+            color: #006621; /* Google green URL color */
+            font-size: 0.875rem;
+        }
+        .result-snippet {
+            color: #4d5156; /* Google gray snippet color */
+            font-size: 0.875rem;
+            line-height: 1.4;
+        }
+        .search-tools-link {
+            color: #5f6368;
+            text-decoration: none;
+            font-size: 0.875rem;
+        }
+        .search-tools-link:hover {
+            text-decoration: underline;
+        }
+        /* Responsive adjustments for layout */
+        @media (max-width: 768px) {
+            .header-container {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+            .search-bar-wrapper {
+                width: 100%;
+                margin-left: 0;
+                margin-top: 1rem;
+            }
+            .search-input-small {
+                max-width: none;
+            }
+            .bookle-logo-small {
+                margin-left: 1rem;
+            }
+        }
+        .loading-indicator {
+            text-align: center;
+            margin-top: 2rem;
+            font-size: 1.1rem;
+            color: #5f6368;
+        }
+    </style>
+</head>
+<body>
+    <header class="flex items-center justify-between p-4 border-b border-gray-200">
+        <div class="flex items-center w-full max-w-6xl mx-auto">
+            <a href="/" class="bookle-logo-small mr-4"><span>B</span><span>o</span><span>o</span><span>k</span><span>l</span><span>e</span></a>
+            <form action="/search" method="get" class="flex-grow flex items-center relative">
+                <input type="text" id="searchInputSmall" name="q" class="search-input-small" aria-label="Search Bookle again" value="{{query if query else ''}}">
+                <button type="submit" class="absolute right-3 top-1/2 -translate-y-1/2 p-2 rounded-full text-gray-500 hover:text-gray-700 focus:outline-none">
+                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                </button>
+            </form>
+        </div>
+    </header>
+
+    <main class="max-w-6xl mx-auto px-4 py-6">
+        <div class="flex items-center text-sm text-gray-600 mb-4 border-b border-gray-200 pb-2">
+            <span id="resultsCount" class="mr-4">{% if results %}Top {{ results|length }} results{% else %}No results found{% endif %}</span>
+            <a href="#" class="search-tools-link flex items-center">
+                <svg class="w-4 h-4 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.943 3.31.826 2.372 2.372a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.941 1.543-.826 3.31-2.372 2.372a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37a1.724 1.724 0 002.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>Tools
+            </a>
+        </div>
+
+        {# Translated Query Section #}
+        {% if translated_query and translated_query != query %}
+        <div class="bg-gray-100 border-l-4 border-gray-400 p-3 mb-6" role="status">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 text-gray-800">
+                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20" xmlns="http://www.w3.org/2000/svg">
+                        <path fill-rule="evenodd" d="M4 4a2 2 0 00-2 2v4a2 2 0 002 2h4a2 2 0 002-2V6a2 2 0 00-2-2H4zm11.5 5a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM14.5 13a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM11.5 17a1.5 1.5 0 100-3 1.5 1.5 0 000 3zM17.5 17a1.5 1.5 0 100-3 1.5 1.5 0 000 3z" clip-rule="evenodd"></path>
+                    </svg>
+                </div>
+                <div class="ml-3">
+                    <p class="font-bold text-gray-800">Showing results for:</p>
+                    <p class="text-sm text-gray-700">"{{ translated_query }}"</p>
+                    <p class="text-xs text-gray-600 mt-1">Your original query was: "{{ query }}"</p>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+
+        {# FLAN-T5 Recommendation Section - Initially loads with a spinner #}
+        <div id="flanRecommendationSection" class="bg-blue-50 border-l-4 border-blue-400 p-4 mb-6" role="alert">
+            <div class="flex items-center">
+                <div class="flex-shrink-0 text-blue-800">
+                    <svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                </div>
+                <div class="ml-3">
+                    <p class="font-bold text-blue-800">Top Bookle Recommendation:</p>
+                    <div id="flanRecommendationContent" class="text-sm text-blue-700 flex items-center">
+                        <svg class="animate-spin h-5 w-5 text-blue-500 mr-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2.529 7.938A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg>
+                        Loading recommendation...
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="searchResults" class="space-y-6">
+            {% if results %}
+                {% for book in results %}
+                <div class="result-item flex items-start space-x-4 mb-6">
+                    {# Use data-src for lazy loading images #}
+                    <img data-src="{{ url_for('static', filename='images/' + book.image_src) if not book.image_src.startswith('http') else book.image_src }}"
+                         alt="{{ book.title }}" class="w-20 h-28 object-cover rounded shadow flex-shrink-0 lazy-load-image"
+                         src="{{ url_for('static', filename='images/placeholder.png') }}"> {# Placeholder src for initial display #}
+                    <div class="flex-1">
+                        <a href="{{ book.url }}" class="result-link">{{ book.title }}</a>
+                        <div class="result-url">{{ book.url }}</div>
+                        <div class="result-snippet mt-1">{{ book.snippet }}</div>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <p>No results found for your query. Please try a different search term.</p>
+            {% endif %}
+        </div>
+
+        <div class="flex justify-center mt-10">
+            <nav aria-label="Page navigation example">
+                <ul class="inline-flex -space-x-px">
+                    <li><a href="#" class="px-3 py-2 ml-0 leading-tight text-blue-700 bg-white border border-gray-300 rounded-l-lg hover:bg-gray-100 hover:text-blue-700">Previous</a></li>
+                    <li><a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 hover:bg-gray-100 hover:text-blue-700">1</a></li>
+                    <li><a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 hover:bg-gray-100 hover:text-blue-700">2</a></li>
+                    <li><a href="#" aria-current="page" class="px-3 py-2 text-blue-600 border border-gray-300 bg-blue-50 hover:bg-blue-100 hover:text-blue-700">3</a></li>
+                    <li><a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 hover:bg-gray-100 hover:text-blue-700">4</a></li>
+                    <li><a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 hover:bg-gray-100 hover:text-blue-700">5</a></li>
+                    <li><a href="#" class="px-3 py-2 leading-tight text-blue-700 bg-white border border-gray-300 rounded-r-lg hover:bg-gray-100 hover:text-blue-700">Next</a></li>
+                </ul>
+            </nav>
+        </div>
+    </main>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function(){
+            // Lazy load images
+            const lazyLoadImages = document.querySelectorAll('.lazy-load-image');
+            const imageObserver = new IntersectionObserver((entries, observer) => {
+                entries.forEach(entry => {
+                    if (entry.isIntersecting) {
+                        const img = entry.target;
+                        img.src = img.dataset.src;
+                        img.classList.remove('lazy-load-image');
+                        observer.unobserve(img);
+                    }
+                });
+            });
+
+            lazyLoadImages.forEach(img => {
+                imageObserver.observe(img);
+            });
+
+            // Fetch Flan-T5 recommendation after initial page load
+            const flanRecommendationContent = document.getElementById('flanRecommendationContent');
+            if (flanRecommendationContent) {
+                fetch('/get_flan_recommendation')
+                    .then(response => response.json())
+                    .then(data => {
+                        flanRecommendationContent.innerHTML = `"${data.recommendation}"`;
+                    })
+                    .catch(error => {
+                        console.error('Error fetching Flan-T5 recommendation:', error);
+                        flanRecommendationContent.innerHTML = "Could not load recommendation.";
+                    });
+            }
+        });
+    </script>
+</body>
+</html>
