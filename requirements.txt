@@ -1,0 +1,10 @@
+Flask
+numpy
+pandas
+nltk
+scikit-learn
+rank_bm25
+sentence-transformers
+torch
+transformers
+googletrans==4.0.0-rc1
